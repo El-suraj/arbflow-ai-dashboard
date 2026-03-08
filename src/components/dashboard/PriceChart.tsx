@@ -1,8 +1,15 @@
 import { PricePoint } from '@/hooks/useMarketData';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, ReferenceDot } from 'recharts';
 import { TrendingUp } from 'lucide-react';
+import { PairSelector } from './PairSelector';
 
-export function PriceChart({ data }: { data: PricePoint[] }) {
+interface PriceChartProps {
+  data: PricePoint[];
+  selectedPair: string;
+  onPairChange: (pair: string) => void;
+}
+
+export function PriceChart({ data, selectedPair, onPairChange }: PriceChartProps) {
   const buySignals = data.filter(d => d.buySignal);
   const sellSignals = data.filter(d => d.sellSignal);
   const latest = data[data.length - 1];
@@ -13,8 +20,8 @@ export function PriceChart({ data }: { data: PricePoint[] }) {
         <div className="flex items-center gap-3">
           <span className="panel-title flex items-center gap-2">
             <TrendingUp className="w-3.5 h-3.5" />
-            BTC/USDT
           </span>
+          <PairSelector value={selectedPair} onChange={onPairChange} />
           {latest && (
             <span className="font-mono text-lg font-bold glow-text">
               ${latest.price.toLocaleString()}

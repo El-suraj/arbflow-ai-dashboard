@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useMarketData } from '@/hooks/useMarketData';
+import { useMarketData, Signal } from '@/hooks/useMarketData';
 import { useAlerts } from '@/hooks/useAlerts';
+import { useTradeExecution } from '@/hooks/useTradeExecution';
 import { StatusBar } from '@/components/dashboard/StatusBar';
 import { SignalTerminal } from '@/components/dashboard/SignalTerminal';
 import { PriceChart } from '@/components/dashboard/PriceChart';
@@ -8,7 +9,10 @@ import { BotController } from '@/components/dashboard/BotController';
 import { OrderbookDepth } from '@/components/dashboard/OrderbookDepth';
 import { WalletPanel } from '@/components/dashboard/WalletPanel';
 import { PerformanceAnalytics } from '@/components/dashboard/PerformanceAnalytics';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ExecutionLog } from '@/components/dashboard/ExecutionLog';
+import { BacktestPanel } from '@/components/dashboard/BacktestPanel';
+import { ChevronDown, ChevronUp, History } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 function CollapsiblePanel({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -29,9 +33,13 @@ function CollapsiblePanel({ title, children, defaultOpen = true }: { title: stri
 }
 
 const Index = () => {
-  const { signals, orderbooks, priceHistory, pnlData, wsStatus, latency } = useMarketData();
+  const [selectedPair, setSelectedPair] = useState('BTC/USDT');
+  const [showBacktest, setShowBacktest] = useState(false);
+  const { signals, orderbooks, priceHistory, pnlData, wsStatus, latency } = useMarketData({ selectedPair });
   const { alertsEnabled, setAlertsEnabled, soundEnabled, setSoundEnabled, triggerAlert, requestNotificationPermission } = useAlerts();
+  const { executions, totalSimPnl, executeSignal } = useTradeExecution();
   const [minSpread, setMinSpread] = useState('0.15');
+  const [maxCapital, setMaxCapital] = useState(5000);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const minSpreadRef = useRef(parseFloat(minSpread) || 0.15);
 
@@ -39,12 +47,10 @@ const Index = () => {
     minSpreadRef.current = parseFloat(minSpread) || 0.15;
   }, [minSpread]);
 
-  // Request notification permission on mount
   useEffect(() => {
     requestNotificationPermission();
   }, [requestNotificationPermission]);
 
-  // Monitor signals for spread alerts
   useEffect(() => {
     if (signals.length === 0) return;
     const latest = signals[0];
@@ -53,11 +59,27 @@ const Index = () => {
     }
   }, [signals, triggerAlert]);
 
+  const handleExecute = useCallback((signal: Signal) => {
+    executeSignal(signal, maxCapital);
+  }, [executeSignal, maxCapital]);
+
+  if (showBacktest) {
+    return <BacktestPanel onClose={() => setShowBacktest(false)} />;
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
-      <StatusBar wsStatus={wsStatus} latency={latency} onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} />
+      <StatusBar wsStatus={wsStatus} latency={latency} onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setShowBacktest(true)}
+          className="h-6 text-[10px] font-mono gap-1 text-muted-foreground hover:text-primary"
+        >
+          <History className="w-3 h-3" /> Backtest
+        </Button>
+      </StatusBar>
 
-      {/* Mobile nav overlay */}
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-40 bg-background/95 overflow-y-auto pt-12 p-3 space-y-2">
           <button onClick={() => setMobileMenuOpen(false)} className="absolute top-3 right-3 text-muted-foreground text-xs font-mono">✕ Close</button>
@@ -70,26 +92,30 @@ const Index = () => {
         </div>
       )}
 
-      {/* Desktop: 3-col grid / Tablet: 2-col / Mobile: 1-col stacked */}
       <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
         <div className="lg:h-full lg:grid lg:grid-cols-[320px_1fr_320px] gap-1.5 p-1.5 space-y-1.5 lg:space-y-0">
 
-          {/* Left Column: Signal Feed */}
-          <div className="min-h-[300px] lg:min-h-0 lg:h-full">
+          {/* Left: Signals + Execution Log */}
+          <div className="flex flex-col gap-1.5 min-h-[300px] lg:min-h-0 lg:h-full">
             <CollapsiblePanel title="Signal Feed" defaultOpen={true}>
-              <SignalTerminal signals={signals} />
+              <div className="flex-[2] min-h-0">
+                <SignalTerminal signals={signals} onExecute={handleExecute} executions={executions} />
+              </div>
+            </CollapsiblePanel>
+            <CollapsiblePanel title="Execution Log" defaultOpen={true}>
+              <ExecutionLog executions={executions} totalPnl={totalSimPnl} />
             </CollapsiblePanel>
           </div>
 
-          {/* Center Column: Chart + Orderbook + Performance */}
+          {/* Center: Chart + Orderbook + Performance */}
           <div className="flex flex-col gap-1.5 min-h-0">
             <div className="min-h-[250px] lg:flex-[2] lg:min-h-0">
-              <PriceChart data={priceHistory} />
+              <PriceChart data={priceHistory} selectedPair={selectedPair} onPairChange={setSelectedPair} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 min-h-0">
               <CollapsiblePanel title="Orderbook Depth">
                 <div className="min-h-[280px] lg:min-h-0">
-                  <OrderbookDepth orderbooks={orderbooks} />
+                  <OrderbookDepth orderbooks={orderbooks} selectedPair={selectedPair} />
                 </div>
               </CollapsiblePanel>
               <CollapsiblePanel title="Performance">
@@ -100,7 +126,7 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Right Column: Bot + Wallet (hidden on mobile, use menu) */}
+          {/* Right: Bot + Wallet */}
           <div className="hidden lg:flex flex-col gap-1.5 min-h-0">
             <BotController
               minSpread={minSpread} onMinSpreadChange={setMinSpread}
