@@ -6,9 +6,10 @@ interface StatusBarProps {
   wsStatus: WsStatus;
   latency: number;
   onToggleMobileMenu?: () => void;
+  children?: React.ReactNode;
 }
 
-export function StatusBar({ wsStatus, latency, onToggleMobileMenu }: StatusBarProps) {
+export function StatusBar({ wsStatus, latency, onToggleMobileMenu, children }: StatusBarProps) {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
