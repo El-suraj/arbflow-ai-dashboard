@@ -32,7 +32,12 @@ function OrderbookSide({ book }: { book: Orderbook }) {
   );
 }
 
-export function OrderbookDepth({ orderbooks }: { orderbooks: [Orderbook, Orderbook] }) {
+interface OrderbookDepthProps {
+  orderbooks: [Orderbook, Orderbook];
+  selectedPair: string;
+}
+
+export function OrderbookDepth({ orderbooks, selectedPair }: OrderbookDepthProps) {
   return (
     <div className="panel glow-border flex flex-col">
       <div className="panel-header">
@@ -40,7 +45,7 @@ export function OrderbookDepth({ orderbooks }: { orderbooks: [Orderbook, Orderbo
           <BookOpen className="w-3.5 h-3.5" />
           Orderbook Depth
         </span>
-        <span className="data-cell text-muted-foreground">BTC/USDT</span>
+        <span className="data-cell text-muted-foreground">{selectedPair}</span>
       </div>
       <div className="flex gap-2 p-2 overflow-hidden flex-1">
         <OrderbookSide book={orderbooks[0]} />

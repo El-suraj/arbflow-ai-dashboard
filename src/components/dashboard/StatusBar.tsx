@@ -6,9 +6,10 @@ interface StatusBarProps {
   wsStatus: WsStatus;
   latency: number;
   onToggleMobileMenu?: () => void;
+  children?: React.ReactNode;
 }
 
-export function StatusBar({ wsStatus, latency, onToggleMobileMenu }: StatusBarProps) {
+export function StatusBar({ wsStatus, latency, onToggleMobileMenu, children }: StatusBarProps) {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -29,6 +30,7 @@ export function StatusBar({ wsStatus, latency, onToggleMobileMenu }: StatusBarPr
         )}
         <span className="font-mono text-sm font-bold glow-text tracking-tight">ArbFlow AI</span>
         <span className="text-[10px] font-mono text-muted-foreground border border-border rounded px-1.5 py-0.5 hidden sm:inline">v2.4.1</span>
+        {children}
       </div>
       <div className="flex items-center gap-2 md:gap-4 text-[10px] font-mono text-muted-foreground">
         <span className="hidden md:flex items-center gap-1"><Cpu className="w-3 h-3" /> Engine: Active</span>

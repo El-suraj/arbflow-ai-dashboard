@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export interface Signal {
   id: string;
@@ -40,13 +40,24 @@ export interface PnLPoint {
   trades: number;
 }
 
+export interface TradeExecution {
+  id: string;
+  signal: Signal;
+  status: 'pending' | 'filling' | 'filled' | 'failed';
+  fillPrice: number;
+  slippage: number;
+  profit: number;
+  timestamp: number;
+  capitalUsed: number;
+}
+
 export type WsStatus = 'connecting' | 'connected' | 'fallback' | 'error';
 
-const PAIRS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'ARB/USDT', 'AVAX/USDT', 'MATIC/USDT', 'LINK/USDT', 'DOGE/USDT'];
+export const PAIRS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'ARB/USDT', 'AVAX/USDT', 'MATIC/USDT', 'LINK/USDT', 'DOGE/USDT'];
 const EXCHANGES = ['Binance', 'Coinbase', 'Kraken', 'OKX', 'Bybit', 'KuCoin', 'Bitfinex', 'Huobi'];
 const FEE = 0.002;
 
-const BASE_PRICES: Record<string, number> = {
+export const BASE_PRICES: Record<string, number> = {
   'BTC/USDT': 67450, 'ETH/USDT': 3520, 'SOL/USDT': 142, 'ARB/USDT': 1.12,
   'AVAX/USDT': 35.8, 'MATIC/USDT': 0.72, 'LINK/USDT': 14.5, 'DOGE/USDT': 0.082,
 };
@@ -55,7 +66,7 @@ function jitter(base: number, pct: number) {
   return base * (1 + (Math.random() - 0.5) * 2 * pct);
 }
 
-function generateOrderbook(exchange: string, basePrice: number): Orderbook {
+export function generateOrderbook(exchange: string, basePrice: number): Orderbook {
   const bids: OrderbookLevel[] = [];
   const asks: OrderbookLevel[] = [];
   let bidTotal = 0, askTotal = 0;
@@ -108,28 +119,40 @@ function generateMockSignal(): Signal {
   };
 }
 
-export function useMarketData() {
+interface UseMarketDataOptions {
+  selectedPair: string;
+}
+
+export function useMarketData({ selectedPair }: UseMarketDataOptions) {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [orderbooks, setOrderbooks] = useState<[Orderbook, Orderbook]>(() => [
-    generateOrderbook('Binance', BASE_PRICES['BTC/USDT']),
-    generateOrderbook('Coinbase', BASE_PRICES['BTC/USDT']),
+    generateOrderbook('Binance', BASE_PRICES[selectedPair] || BASE_PRICES['BTC/USDT']),
+    generateOrderbook('Coinbase', BASE_PRICES[selectedPair] || BASE_PRICES['BTC/USDT']),
   ]);
   const [priceHistory, setPriceHistory] = useState<PricePoint[]>([]);
   const [pnlData, setPnlData] = useState<PnLPoint[]>([]);
   const [wsStatus, setWsStatus] = useState<WsStatus>('connecting');
   const [latency, setLatency] = useState(0);
 
-  const binancePriceRef = useRef(BASE_PRICES['BTC/USDT']);
-  const coinbasePriceRef = useRef(BASE_PRICES['BTC/USDT']);
-  const priceRef = useRef(BASE_PRICES['BTC/USDT']);
+  const binancePriceRef = useRef(BASE_PRICES[selectedPair] || BASE_PRICES['BTC/USDT']);
+  const coinbasePriceRef = useRef(BASE_PRICES[selectedPair] || BASE_PRICES['BTC/USDT']);
+  const priceRef = useRef(BASE_PRICES[selectedPair] || BASE_PRICES['BTC/USDT']);
   const wsRefs = useRef<WebSocket[]>([]);
   const usingLiveRef = useRef(false);
+  const selectedPairRef = useRef(selectedPair);
 
-  // Init PnL + historical price
+  // Reset when pair changes
   useEffect(() => {
+    selectedPairRef.current = selectedPair;
+    const base = BASE_PRICES[selectedPair] || BASE_PRICES['BTC/USDT'];
+    priceRef.current = base;
+    binancePriceRef.current = base;
+    coinbasePriceRef.current = base;
+
+    // Re-init price history for new pair
     const now = Date.now();
     const pts: PricePoint[] = [];
-    let p = priceRef.current;
+    let p = base;
     for (let i = 60; i >= 0; i--) {
       p = jitter(p, 0.001);
       const t = new Date(now - i * 5000);
@@ -139,7 +162,11 @@ export function useMarketData() {
     }
     priceRef.current = p;
     setPriceHistory(pts);
+  }, [selectedPair]);
 
+  // Init PnL
+  useEffect(() => {
+    const now = Date.now();
     const pnl: PnLPoint[] = [];
     let cum = 0;
     for (let i = 30; i >= 0; i--) {
@@ -151,7 +178,7 @@ export function useMarketData() {
     setPnlData(pnl);
   }, []);
 
-  // Connect to real WebSockets
+  // Connect to real WebSockets (BTC only, others use mock)
   useEffect(() => {
     let fallbackTimeout: ReturnType<typeof setTimeout>;
     let binanceConnected = false;
@@ -164,76 +191,44 @@ export function useMarketData() {
       }
     };
 
-    // Binance WebSocket - BTC/USDT ticker
     try {
       const binanceWs = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
       wsRefs.current.push(binanceWs);
-
-      binanceWs.onopen = () => {
-        binanceConnected = true;
-        checkBothConnected();
-      };
-
+      binanceWs.onopen = () => { binanceConnected = true; checkBothConnected(); };
       binanceWs.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.p) {
+          if (data.p && selectedPairRef.current === 'BTC/USDT') {
             const price = parseFloat(data.p);
-            const pingTime = Date.now() - data.T;
             binancePriceRef.current = price;
             priceRef.current = price;
-            setLatency(Math.max(1, Math.min(pingTime, 200)));
+            setLatency(Math.max(1, Math.min(Date.now() - data.T, 200)));
           }
         } catch {}
       };
+      binanceWs.onerror = () => { binanceConnected = false; };
+      binanceWs.onclose = () => { binanceConnected = false; if (!coinbaseConnected) startFallback(); };
+    } catch {}
 
-      binanceWs.onerror = () => {
-        binanceConnected = false;
-      };
-
-      binanceWs.onclose = () => {
-        binanceConnected = false;
-        if (!coinbaseConnected) startFallback();
-      };
-    } catch {
-      // WebSocket blocked
-    }
-
-    // Coinbase WebSocket - BTC-USD ticker
     try {
       const coinbaseWs = new WebSocket('wss://ws-feed.exchange.coinbase.com');
       wsRefs.current.push(coinbaseWs);
-
       coinbaseWs.onopen = () => {
-        coinbaseWs.send(JSON.stringify({
-          type: 'subscribe',
-          product_ids: ['BTC-USD'],
-          channels: ['ticker'],
-        }));
+        coinbaseWs.send(JSON.stringify({ type: 'subscribe', product_ids: ['BTC-USD'], channels: ['ticker'] }));
         coinbaseConnected = true;
         checkBothConnected();
       };
-
       coinbaseWs.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === 'ticker' && data.price) {
+          if (data.type === 'ticker' && data.price && selectedPairRef.current === 'BTC/USDT') {
             coinbasePriceRef.current = parseFloat(data.price);
           }
         } catch {}
       };
-
-      coinbaseWs.onerror = () => {
-        coinbaseConnected = false;
-      };
-
-      coinbaseWs.onclose = () => {
-        coinbaseConnected = false;
-        if (!binanceConnected) startFallback();
-      };
-    } catch {
-      // WebSocket blocked
-    }
+      coinbaseWs.onerror = () => { coinbaseConnected = false; };
+      coinbaseWs.onclose = () => { coinbaseConnected = false; if (!binanceConnected) startFallback(); };
+    } catch {}
 
     const startFallback = () => {
       if (!usingLiveRef.current) {
@@ -242,29 +237,22 @@ export function useMarketData() {
       }
     };
 
-    // Fallback after 5s if no connection
     fallbackTimeout = setTimeout(() => {
-      if (!binanceConnected && !coinbaseConnected) {
-        startFallback();
-      }
+      if (!binanceConnected && !coinbaseConnected) startFallback();
     }, 5000);
 
     return () => {
       clearTimeout(fallbackTimeout);
-      wsRefs.current.forEach(ws => {
-        try { ws.close(); } catch {}
-      });
+      wsRefs.current.forEach(ws => { try { ws.close(); } catch {} });
       wsRefs.current = [];
     };
   }, []);
 
-  // Generate signals from live or mock data
+  // Tick signals
   useEffect(() => {
     const iv = setInterval(() => {
-      if (usingLiveRef.current) {
-        // Generate real signal from live prices
+      if (usingLiveRef.current && selectedPairRef.current === 'BTC/USDT') {
         const realSignal = generateSignalFromPrices(binancePriceRef.current, coinbasePriceRef.current, 'BTC/USDT');
-        // Also generate mock signals for other pairs to keep feed busy
         const mockSignal = generateMockSignal();
         setSignals(prev => [realSignal, mockSignal, ...prev].slice(0, 50));
       } else {
@@ -274,12 +262,13 @@ export function useMarketData() {
     return () => clearInterval(iv);
   }, []);
 
-  // Tick orderbooks using live or mock prices
+  // Tick orderbooks
   useEffect(() => {
     const iv = setInterval(() => {
-      const binPrice = usingLiveRef.current ? binancePriceRef.current : jitter(priceRef.current, 0.0005);
-      const cbPrice = usingLiveRef.current ? coinbasePriceRef.current : jitter(priceRef.current, 0.0008);
-      if (!usingLiveRef.current) priceRef.current = binPrice;
+      const useLive = usingLiveRef.current && selectedPairRef.current === 'BTC/USDT';
+      const binPrice = useLive ? binancePriceRef.current : jitter(priceRef.current, 0.0005);
+      const cbPrice = useLive ? coinbasePriceRef.current : jitter(priceRef.current, 0.0008);
+      if (!useLive) priceRef.current = binPrice;
       setOrderbooks([
         generateOrderbook('Binance', binPrice),
         generateOrderbook('Coinbase', cbPrice),
@@ -291,8 +280,9 @@ export function useMarketData() {
   // Tick price history
   useEffect(() => {
     const iv = setInterval(() => {
-      const currentPrice = usingLiveRef.current ? binancePriceRef.current : jitter(priceRef.current, 0.0008);
-      if (!usingLiveRef.current) priceRef.current = currentPrice;
+      const useLive = usingLiveRef.current && selectedPairRef.current === 'BTC/USDT';
+      const currentPrice = useLive ? binancePriceRef.current : jitter(priceRef.current, 0.0008);
+      if (!useLive) priceRef.current = currentPrice;
       const buy = Math.random() > 0.93;
       const sell = !buy && Math.random() > 0.93;
       setPriceHistory(prev => [
