@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
-import { Bot, Zap, Triangle, FlaskConical } from 'lucide-react';
+import { Bot, Zap, Triangle, FlaskConical, Bell, Volume2 } from 'lucide-react';
 
 interface Strategy {
   id: string;
@@ -11,14 +11,26 @@ interface Strategy {
   description: string;
 }
 
-export function BotController() {
+interface BotControllerProps {
+  minSpread: string;
+  onMinSpreadChange: (v: string) => void;
+  alertsEnabled: boolean;
+  onAlertsEnabledChange: (v: boolean) => void;
+  soundEnabled: boolean;
+  onSoundEnabledChange: (v: boolean) => void;
+}
+
+export function BotController({
+  minSpread, onMinSpreadChange,
+  alertsEnabled, onAlertsEnabledChange,
+  soundEnabled, onSoundEnabledChange,
+}: BotControllerProps) {
   const [strategies, setStrategies] = useState<Strategy[]>([
     { id: 'spatial', name: 'Spatial Arb', icon: <Zap className="w-4 h-4" />, active: true, description: 'Cross-exchange price differential' },
     { id: 'triangular', name: 'Triangular', icon: <Triangle className="w-4 h-4" />, active: false, description: 'Multi-pair cycle arbitrage' },
     { id: 'flash', name: 'Flash Loan', icon: <FlaskConical className="w-4 h-4" />, active: false, description: 'DeFi flash loan execution' },
   ]);
   const [maxCapital, setMaxCapital] = useState('5000');
-  const [minSpread, setMinSpread] = useState('0.15');
 
   const toggleStrategy = (id: string) => {
     setStrategies(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
@@ -48,11 +60,27 @@ export function BotController() {
             <Switch checked={s.active} onCheckedChange={() => toggleStrategy(s.id)} />
           </div>
         ))}
+
         <div className="space-y-2 pt-2 border-t border-border">
           <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">Max Capital / Trade (USDT)</label>
           <Input value={maxCapital} onChange={e => setMaxCapital(e.target.value)} className="font-mono text-sm h-8 bg-secondary/30" />
           <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">Min Spread Trigger (%)</label>
-          <Input value={minSpread} onChange={e => setMinSpread(e.target.value)} className="font-mono text-sm h-8 bg-secondary/30" />
+          <Input value={minSpread} onChange={e => onMinSpreadChange(e.target.value)} className="font-mono text-sm h-8 bg-secondary/30" />
+        </div>
+
+        <div className="space-y-2 pt-2 border-t border-border">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono flex items-center gap-1.5">
+              <Bell className="w-3 h-3" /> Spread Alerts
+            </span>
+            <Switch checked={alertsEnabled} onCheckedChange={onAlertsEnabledChange} />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono flex items-center gap-1.5">
+              <Volume2 className="w-3 h-3" /> Sound Alerts
+            </span>
+            <Switch checked={soundEnabled} onCheckedChange={onSoundEnabledChange} />
+          </div>
         </div>
       </div>
     </div>
