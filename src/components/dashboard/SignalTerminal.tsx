@@ -21,7 +21,49 @@ export function SignalTerminal({ signals, onExecute, executions = [] }: SignalTe
         <span className="status-live">LIVE</span>
       </div>
       <ScrollArea className="flex-1">
-        <table className="w-full">
+        {/* Mobile card layout */}
+        <div className="md:hidden divide-y divide-border/50">
+          {signals.slice(0, 30).map((s) => {
+            const isProfitable = s.netProfit > 0;
+            const isExecuted = executingIds.has(s.id);
+            return (
+              <div key={s.id} className="p-2.5 ticker-flash hover:bg-secondary/30 transition-colors space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="data-cell font-semibold glow-text text-sm">{s.pair}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`data-cell font-semibold ${isProfitable ? 'spread-positive' : 'spread-negative'}`}>
+                      {isProfitable ? '+' : ''}{s.netProfit.toFixed(3)}%
+                    </span>
+                    {isProfitable && !isExecuted && onExecute ? (
+                      <button
+                        onClick={() => onExecute(s)}
+                        className="p-1.5 rounded bg-primary/10 hover:bg-primary/20 text-primary"
+                        title="Execute trade"
+                      >
+                        <Crosshair className="w-4 h-4" />
+                      </button>
+                    ) : isExecuted ? (
+                      <span className="text-[9px] font-mono text-green-signal px-1">EXEC</span>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-muted-foreground">
+                    <span className="text-foreground">{s.exchangeA}</span>
+                    <span className="text-primary mx-1">→</span>
+                    <span className="text-foreground">{s.exchangeB}</span>
+                  </span>
+                  <span className={`${s.spread > 0.4 ? 'spread-positive' : 'text-muted-foreground'}`}>
+                    {s.spread.toFixed(3)}%
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop table layout */}
+        <table className="w-full hidden md:table">
           <thead>
             <tr className="border-b border-border">
               <th className="data-cell text-left p-2 text-muted-foreground">Pair</th>

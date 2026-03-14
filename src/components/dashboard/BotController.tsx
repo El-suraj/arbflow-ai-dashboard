@@ -30,7 +30,7 @@ export function BotController({
     { id: 'triangular', name: 'Triangular', icon: <Triangle className="w-4 h-4" />, active: false, description: 'Multi-pair cycle arbitrage' },
     { id: 'flash', name: 'Flash Loan', icon: <FlaskConical className="w-4 h-4" />, active: false, description: 'DeFi flash loan execution' },
   ]);
-  const [maxCapital, setMaxCapital] = useState('5000');
+  
 
   const toggleStrategy = (id: string) => {
     setStrategies(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
@@ -62,8 +62,6 @@ export function BotController({
         ))}
 
         <div className="space-y-2 pt-2 border-t border-border">
-          <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">Max Capital / Trade (USDT)</label>
-          <Input value={maxCapital} onChange={e => setMaxCapital(e.target.value)} className="font-mono text-sm h-8 bg-secondary/30" />
           <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">Min Spread Trigger (%)</label>
           <Input value={minSpread} onChange={e => onMinSpreadChange(e.target.value)} className="font-mono text-sm h-8 bg-secondary/30" />
         </div>
