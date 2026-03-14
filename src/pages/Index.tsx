@@ -11,6 +11,7 @@ import { WalletPanel } from '@/components/dashboard/WalletPanel';
 import { PerformanceAnalytics } from '@/components/dashboard/PerformanceAnalytics';
 import { ExecutionLog } from '@/components/dashboard/ExecutionLog';
 import { BacktestPanel } from '@/components/dashboard/BacktestPanel';
+import { RiskManagement } from '@/components/dashboard/RiskManagement';
 import { ChevronDown, ChevronUp, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
