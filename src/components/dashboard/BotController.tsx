@@ -62,8 +62,6 @@ export function BotController({
         ))}
 
         <div className="space-y-2 pt-2 border-t border-border">
-          <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">Max Capital / Trade (USDT)</label>
-          <Input value={maxCapital} onChange={e => setMaxCapital(e.target.value)} className="font-mono text-sm h-8 bg-secondary/30" />
           <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">Min Spread Trigger (%)</label>
           <Input value={minSpread} onChange={e => onMinSpreadChange(e.target.value)} className="font-mono text-sm h-8 bg-secondary/30" />
         </div>
