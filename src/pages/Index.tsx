@@ -89,6 +89,11 @@ const Index = () => {
             alertsEnabled={alertsEnabled} onAlertsEnabledChange={setAlertsEnabled}
             soundEnabled={soundEnabled} onSoundEnabledChange={setSoundEnabled}
           />
+          <RiskManagement
+            maxCapital={maxCapital}
+            onMaxCapitalChange={setMaxCapital}
+            totalPnl={totalSimPnl}
+          />
           <WalletPanel />
         </div>
       )}

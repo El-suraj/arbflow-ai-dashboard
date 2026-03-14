@@ -30,7 +30,7 @@ export function BotController({
     { id: 'triangular', name: 'Triangular', icon: <Triangle className="w-4 h-4" />, active: false, description: 'Multi-pair cycle arbitrage' },
     { id: 'flash', name: 'Flash Loan', icon: <FlaskConical className="w-4 h-4" />, active: false, description: 'DeFi flash loan execution' },
   ]);
-  const [maxCapital, setMaxCapital] = useState('5000');
+  
 
   const toggleStrategy = (id: string) => {
     setStrategies(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
