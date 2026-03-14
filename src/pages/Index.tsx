@@ -127,12 +127,17 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Right: Bot + Wallet */}
-          <div className="hidden lg:flex flex-col gap-1.5 min-h-0">
+          {/* Right: Bot + Risk + Wallet */}
+          <div className="hidden lg:flex flex-col gap-1.5 min-h-0 overflow-y-auto">
             <BotController
               minSpread={minSpread} onMinSpreadChange={setMinSpread}
               alertsEnabled={alertsEnabled} onAlertsEnabledChange={setAlertsEnabled}
               soundEnabled={soundEnabled} onSoundEnabledChange={setSoundEnabled}
+            />
+            <RiskManagement
+              maxCapital={maxCapital}
+              onMaxCapitalChange={setMaxCapital}
+              totalPnl={totalSimPnl}
             />
             <WalletPanel />
           </div>
