@@ -37,7 +37,19 @@ function CollapsiblePanel({ title, children, defaultOpen = true }: { title: stri
 const Index = () => {
   const [selectedPair, setSelectedPair] = useState('BTC/USDT');
   const [showBacktest, setShowBacktest] = useState(false);
-  const { signals, orderbooks, priceHistory, pnlData, wsStatus, latency } = useMarketData({ selectedPair });
+  const [dataSource, setDataSource] = useState<'live' | 'mock'>('live');
+  const mockData = useMarketData({ selectedPair });
+  const bybitData = useBybitData({ selectedPair });
+  
+  // Use Bybit real data when live, fallback to mock
+  const isLive = dataSource === 'live' && bybitData.wsStatus === 'connected';
+  const signals = isLive ? bybitData.signals : mockData.signals;
+  const orderbooks = isLive ? bybitData.orderbooks : mockData.orderbooks;
+  const priceHistory = isLive ? bybitData.priceHistory : mockData.priceHistory;
+  const pnlData = mockData.pnlData; // PnL is always from history
+  const wsStatus = isLive ? bybitData.wsStatus : mockData.wsStatus;
+  const latency = isLive ? bybitData.latency : mockData.latency;
+
   const { alertsEnabled, setAlertsEnabled, soundEnabled, setSoundEnabled, triggerAlert, requestNotificationPermission } = useAlerts();
   const { executions, totalSimPnl, executeSignal } = useTradeExecution();
   const [minSpread, setMinSpread] = useState('0.15');
