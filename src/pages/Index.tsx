@@ -125,7 +125,7 @@ const Index = () => {
             onMaxCapitalChange={setMaxCapital}
             totalPnl={totalSimPnl}
           />
-          <WalletPanel />
+            <WalletPanel balances={bybitData.balances} />
         </div>
       )}
 
