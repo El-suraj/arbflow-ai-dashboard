@@ -84,6 +84,24 @@ const Index = () => {
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
       <StatusBar wsStatus={wsStatus} latency={latency} onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant={dataSource === 'live' ? 'default' : 'ghost'}
+            onClick={() => setDataSource('live')}
+            className="h-6 text-[10px] font-mono gap-1"
+          >
+            🟢 LIVE
+          </Button>
+          <Button
+            size="sm"
+            variant={dataSource === 'mock' ? 'default' : 'ghost'}
+            onClick={() => setDataSource('mock')}
+            className="h-6 text-[10px] font-mono gap-1"
+          >
+            🔵 MOCK
+          </Button>
+        </div>
         <Button
           size="sm"
           variant="ghost"
