@@ -3,18 +3,16 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Wallet, Eye, EyeOff, Shield } from 'lucide-react';
 
-const MOCK_BALANCES = [
-  { exchange: 'Binance', usdt: 24350.82, btc: 0.1245, eth: 2.45 },
-  { exchange: 'Coinbase', usdt: 18720.50, btc: 0.0892, eth: 1.88 },
-  { exchange: 'Kraken', usdt: 12100.00, btc: 0.0500, eth: 0.75 },
-];
+interface WalletPanelProps {
+  balances?: { coin: string; free: string; locked: string }[];
+}
 
-export function WalletPanel() {
+export function WalletPanel({ balances = [] }: WalletPanelProps) {
   const [showKeys, setShowKeys] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [apiSecret, setApiSecret] = useState('');
 
-  const totalUSDT = MOCK_BALANCES.reduce((s, b) => s + b.usdt, 0);
+  const hasRealBalances = balances.length > 0;
 
   return (
     <div className="panel glow-border flex flex-col">
@@ -23,20 +21,27 @@ export function WalletPanel() {
           <Wallet className="w-3.5 h-3.5" />
           Wallet & APIs
         </span>
-        <span className="glow-text data-cell font-semibold">${totalUSDT.toLocaleString()}</span>
+        <span className={`data-cell font-semibold text-xs ${hasRealBalances ? 'glow-text' : 'text-muted-foreground'}`}>
+          {hasRealBalances ? 'LIVE' : 'NOT CONNECTED'}
+        </span>
       </div>
       <div className="p-3 space-y-3 text-xs">
         <div className="space-y-1">
-          {MOCK_BALANCES.map(b => (
-            <div key={b.exchange} className="flex justify-between items-center py-1.5 px-2 rounded bg-secondary/20">
-              <span className="font-mono font-semibold text-foreground">{b.exchange}</span>
-              <div className="flex gap-3 data-cell text-muted-foreground">
-                <span>${b.usdt.toLocaleString()}</span>
-                <span>{b.btc} BTC</span>
-                <span>{b.eth} ETH</span>
+          {hasRealBalances ? (
+            balances.map(b => (
+              <div key={b.coin} className="flex justify-between items-center py-1.5 px-2 rounded bg-secondary/20">
+                <span className="font-mono font-semibold text-foreground">{b.coin}</span>
+                <div className="flex gap-3 data-cell text-muted-foreground">
+                  <span>Free: {parseFloat(b.free).toFixed(6)}</span>
+                  <span>Locked: {parseFloat(b.locked).toFixed(6)}</span>
+                </div>
               </div>
+            ))
+          ) : (
+            <div className="text-center py-4 text-muted-foreground font-mono text-[10px]">
+              No live balances — connect Bybit API keys via Cloud secrets
             </div>
-          ))}
+          )}
         </div>
         <div className="border-t border-border pt-3 space-y-2">
           <div className="flex items-center justify-between">

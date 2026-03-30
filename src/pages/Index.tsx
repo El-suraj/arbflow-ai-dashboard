@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useMarketData, Signal } from '@/hooks/useMarketData';
+import { useBybitData } from '@/hooks/useBybitData';
 import { useAlerts } from '@/hooks/useAlerts';
 import { useTradeExecution } from '@/hooks/useTradeExecution';
 import { StatusBar } from '@/components/dashboard/StatusBar';
@@ -36,7 +37,19 @@ function CollapsiblePanel({ title, children, defaultOpen = true }: { title: stri
 const Index = () => {
   const [selectedPair, setSelectedPair] = useState('BTC/USDT');
   const [showBacktest, setShowBacktest] = useState(false);
-  const { signals, orderbooks, priceHistory, pnlData, wsStatus, latency } = useMarketData({ selectedPair });
+  const [dataSource, setDataSource] = useState<'live' | 'mock'>('live');
+  const mockData = useMarketData({ selectedPair });
+  const bybitData = useBybitData({ selectedPair });
+  
+  // Use Bybit real data when live, fallback to mock
+  const isLive = dataSource === 'live' && bybitData.wsStatus === 'connected';
+  const signals = isLive ? bybitData.signals : mockData.signals;
+  const orderbooks = isLive ? bybitData.orderbooks : mockData.orderbooks;
+  const priceHistory = isLive ? bybitData.priceHistory : mockData.priceHistory;
+  const pnlData = mockData.pnlData; // PnL is always from history
+  const wsStatus = isLive ? bybitData.wsStatus : mockData.wsStatus;
+  const latency = isLive ? bybitData.latency : mockData.latency;
+
   const { alertsEnabled, setAlertsEnabled, soundEnabled, setSoundEnabled, triggerAlert, requestNotificationPermission } = useAlerts();
   const { executions, totalSimPnl, executeSignal } = useTradeExecution();
   const [minSpread, setMinSpread] = useState('0.15');
@@ -71,6 +84,24 @@ const Index = () => {
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
       <StatusBar wsStatus={wsStatus} latency={latency} onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant={dataSource === 'live' ? 'default' : 'ghost'}
+            onClick={() => setDataSource('live')}
+            className="h-6 text-[10px] font-mono gap-1"
+          >
+            🟢 LIVE
+          </Button>
+          <Button
+            size="sm"
+            variant={dataSource === 'mock' ? 'default' : 'ghost'}
+            onClick={() => setDataSource('mock')}
+            className="h-6 text-[10px] font-mono gap-1"
+          >
+            🔵 MOCK
+          </Button>
+        </div>
         <Button
           size="sm"
           variant="ghost"
@@ -94,7 +125,7 @@ const Index = () => {
             onMaxCapitalChange={setMaxCapital}
             totalPnl={totalSimPnl}
           />
-          <WalletPanel />
+            <WalletPanel balances={bybitData.balances} />
         </div>
       )}
 
@@ -144,7 +175,7 @@ const Index = () => {
               onMaxCapitalChange={setMaxCapital}
               totalPnl={totalSimPnl}
             />
-            <WalletPanel />
+            <WalletPanel balances={bybitData.balances} />
           </div>
         </div>
       </div>
