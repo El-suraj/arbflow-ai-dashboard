@@ -3,18 +3,16 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Wallet, Eye, EyeOff, Shield } from 'lucide-react';
 
-const MOCK_BALANCES = [
-  { exchange: 'Binance', usdt: 24350.82, btc: 0.1245, eth: 2.45 },
-  { exchange: 'Coinbase', usdt: 18720.50, btc: 0.0892, eth: 1.88 },
-  { exchange: 'Kraken', usdt: 12100.00, btc: 0.0500, eth: 0.75 },
-];
+interface WalletPanelProps {
+  balances?: { coin: string; free: string; locked: string }[];
+}
 
-export function WalletPanel() {
+export function WalletPanel({ balances = [] }: WalletPanelProps) {
   const [showKeys, setShowKeys] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [apiSecret, setApiSecret] = useState('');
 
-  const totalUSDT = MOCK_BALANCES.reduce((s, b) => s + b.usdt, 0);
+  const hasRealBalances = balances.length > 0;
 
   return (
     <div className="panel glow-border flex flex-col">
