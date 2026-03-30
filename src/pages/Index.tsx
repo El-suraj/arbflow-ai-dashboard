@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useMarketData, Signal } from '@/hooks/useMarketData';
+import { useBybitData } from '@/hooks/useBybitData';
 import { useAlerts } from '@/hooks/useAlerts';
 import { useTradeExecution } from '@/hooks/useTradeExecution';
 import { StatusBar } from '@/components/dashboard/StatusBar';
